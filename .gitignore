@@ -1,0 +1,17 @@
+# Environnement
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Données : jamais versionnées, get_data.py les télécharge
+data/*
+!data/.gitkeep
+
+# Systèmes
+.DS_Store
+Thumbs.db
+
+# Secrets Streamlit éventuels (déploiement)
+.streamlit/secrets.toml
