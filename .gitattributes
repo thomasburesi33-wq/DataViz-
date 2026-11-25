@@ -1,0 +1,4 @@
+# Fins de ligne normalisées : le dépôt reste propre entre macOS, Linux et Windows.
+* text=auto eol=lf
+*.ipynb text eol=lf
+*.png binary
