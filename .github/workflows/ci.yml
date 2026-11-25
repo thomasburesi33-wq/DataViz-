@@ -1,0 +1,33 @@
+# Vérifie à chaque push que le projet s'installe et tourne depuis un clone frais,
+# sur Linux, macOS et Windows.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Installer l'environnement épinglé
+        run: uv sync
+      - name: Tests de la logique (sans données)
+        run: uv run pytest -q
+
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+      - name: Télécharger les données
+        run: uv run python get_data.py
+      - name: Lancer chaque page de l'application
+        run: uv run pytest -q tests/test_app.py
