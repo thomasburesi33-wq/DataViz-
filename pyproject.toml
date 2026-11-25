@@ -1,0 +1,29 @@
+[project]
+name = "dataviz-stackoverflow-2026"
+version = "0.1.0"
+description = "Application d'analyse Streamlit de l'enquête Stack Overflow 2026 pour un commanditaire du marché français"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit==1.67.0",
+    "pandas==3.1.1",
+    "matplotlib==3.11.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+# Notebooks d'exploration : uv sync --group notebooks
+notebooks = [
+    "jupyterlab>=4",
+    "ipykernel>=6",
+]
+
+[tool.uv]
+# Le projet est une application, pas un paquet installable.
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
