@@ -56,4 +56,8 @@ Titre de la figure : il n'affirme le constat que pour la population par défaut 
 
 ## Axes
 
-- *Chaque responsable d'axe ajoute ici ses choix (question, filtres, figures, seuils).*
+## Axes 3
+- **Figures comparées en une seule vue** : barres horizontales groupées en Altair
+  (une couleur par zone, France en bleu `#257de0`, Europe en orange `#f47230`,
+  comme la page principale), construites dans la page — `ui/charts.py` n'est pas
+  modifié, pas de conflit avec les autres branches.
