@@ -1,61 +1,75 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-
-# On importe les fonctions de notre analyse
-from analysis.axe_2 import filter_axis, main_table
+from analysis.axe_2 import filter_axis, main_table, AXIS_FILTER
 
 st.set_page_config(page_title="Axe 2 : Freins et confiance", layout="wide")
-
 st.title("Axe 2 : Freins et confiance")
 
-# --- Chargement des données (À adapter) ---
-# Normalement, vous devriez avoir un fichier commun qui charge les données 
-# de l'enquête (ex: depuis data/). Voici comment faire pour tester :
+# --- CHARGEMENT DES VRAIES DONNÉES ---
 @st.cache_data
-def load_data():
-    # Remplacer par la vraie fonction de chargement de votre cours
-    # ex: return pd.read_csv("data/stack_overflow.csv")
-    data = {
-        'Country': ['France', 'Allemagne', 'Royaume-Uni', 'Italie', 'Espagne'],
-        'Age': ['18-24', '25-34', '35-44', '18-24', '25-34'],
-        'AIAvoid': ['Oui', 'Non', 'Oui', 'Oui', 'Non'],
-        'AITrust_Score': [2.8, 3.1, 2.9, 2.7, 3.0],
-    }
-    return pd.DataFrame(data)
+def load_real_data():
+    # On charge le fichier que vous avez dans le dossier data/
+    df = pd.read_csv("data/survey_2026_results.csv")
+    return df
 
-df = load_data()
+df = load_real_data()
 
-# --- Barre latérale (Filtres) ---
-# On utilise la fonction filter_axis du prof
-age_options = df['Age'].unique().tolist()
-selected_ages = st.sidebar.multiselect("Filtrer par âge", age_options, default=age_options)
+# --- FILTRES ---
+# On récupère les âges disponibles dans le vrai jeu de données
+if AXIS_FILTER in df.columns:
+    age_options = df[AXIS_FILTER].dropna().unique().tolist()
+    selected_ages = st.sidebar.multiselect("Filtrer par âge", age_options, default=age_options[:3])
+    df_filtered = filter_axis(df, selected_ages)
+else:
+    st.warning(f"La colonne {AXIS_FILTER} n'existe pas dans les données.")
+    df_filtered = df
 
-# On applique le filtre
-df_filtered = filter_axis(df, selected_ages)
-
-# --- Création des onglets ---
+# --- ONGLETS ---
 tab_constat, tab_explorer, tab_donnees = st.tabs(["Le constat", "Explorer", "Données"])
 
 with tab_constat:
     st.header("Le constat")
     
-    # Effectif minimal
+    # Effectif minimal (on met 50 car on a de vraies données)
     if len(df_filtered) < 50:
-        st.warning("Effectif trop faible pour afficher une figure fiable.")
+        st.warning(f"Effectif trop faible ({len(df_filtered)} répondants) pour afficher une figure fiable.")
         st.stop()
         
-    # On récupère la table principale calculée par le prof
+    st.write(f"Nombre de répondants après filtre : **{len(df_filtered)}**")
+    
+    # On teste la fonction du professeur
     try:
-        table = main_table(df_filtered)
-        st.dataframe(table) # À remplacer par un graphique Plotly
+        table_principale = main_table(df_filtered)
+        st.write("### Répartition de l'évitement de l'IA")
+        st.dataframe(table_principale)
+        
+        # On fait un graphique Plotly si la table a au moins 2 colonnes
+        if len(table_principale.columns) >= 2:
+            fig = px.bar(
+                table_principale, 
+                x=table_principale.columns[0], 
+                y=table_principale.columns[1],
+                title="Répartition de l'AIAvoid",
+                color=table_principale.columns[0]
+            )
+            st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
-        st.info(f"La table n'a pas pu être générée avec les données de test : {e}")
+        st.error(f"Erreur avec la fonction du professeur : {e}")
+        st.write("Voici un aperçu des données brutes pour comprendre :")
+        st.dataframe(df_filtered[[AXIS_FILTER, "AIAvoid"]].head(20))
 
 with tab_explorer:
     st.header("Explorer")
-    st.write("Ajoutez vos graphiques interactifs ici.")
+    st.write(f"Effectif total filtré : {len(df_filtered)}")
+    
+    # Un petit graphique d'exploration avec Plotly
+    if "AITrust" in df.columns:
+        fig2 = px.histogram(df_filtered, x="AITrust", title="Distribution de la confiance en l'IA")
+        st.plotly_chart(fig2, use_container_width=True)
+    else:
+        st.info("La colonne AITrust n'est pas disponible pour l'exploration.")
 
 with tab_donnees:
     st.header("Données")
-    st.dataframe(df_filtered)
+    st.dataframe(df_filtered.head(100))
