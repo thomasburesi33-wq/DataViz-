@@ -6,10 +6,11 @@ et rappelle la population sous chaque figure.
 """
 from __future__ import annotations
 
+import altair as alt  # fourni avec Streamlit, comme dans app.py : aucune dépendance à ajouter
 import streamlit as st
 
 from analysis import accueil, axe_3, config, load
-from ui import charts, common
+from ui import common
 
 st.title("Axe 3 · Outils et modèles : quoi fournir ?")
 st.markdown(
@@ -18,10 +19,10 @@ st.markdown(
 sont réellement utilisés ? Existe-t-il une option européenne crédible (Mistral) ?
 Pourquoi les développeurs changent-ils d'outil ?
 
-La **France** est comparée à ses **8 voisins européens** (Allemagne, Royaume-Uni,
-Pays-Bas, Espagne, Italie, Pologne, Suède, Suisse). Les parts sont exprimées parmi
-les répondants ayant répondu à chaque question ; l'option européenne Mistral est
-repérée par 🇪🇺.
+La **France** (bleu) est comparée à ses **8 voisins européens** (orange : Allemagne,
+Royaume-Uni, Pays-Bas, Espagne, Italie, Pologne, Suède, Suisse). Les parts sont
+exprimées parmi les répondants ayant répondu à chaque question ; l'option
+européenne Mistral est repérée par (UE).
 """
 )
 
@@ -54,8 +55,6 @@ if france.empty:
     st.warning("Aucun répondant en France ne correspond à ces filtres.")
     st.stop()
 
-EUROPE_LABEL = f"Europe ({len(europe)} pays)"
-
 # --- Population sous chaque figure : qui, quelle année, combien de répondants ---
 
 def _show_population(df_zone, zone: str, extra: str) -> None:
@@ -72,6 +71,42 @@ def _ecart(part_fr: float | None, part_eu: float | None) -> str | None:
         return None
     return f"{100 * (part_fr - part_eu):+.1f} pts vs Europe".replace(".", ",")
 
+def _figure_compare(donnees, titre: str, xlabel: str = "Part des répondants") -> None:
+    """Barres horizontales groupées : France en bleu, Europe en orange, côte à côte.
+
+    La hauteur est fixée PAR OPTION (alt.Step) : les deux barres d'une option ont
+    toujours la place d'être séparées, quelle que soit la taille de la fenêtre.
+    La table vient de analysis/axe_3.py (colonnes option, share, n, base, Zone) ;
+    cette fonction ne calcule rien, elle ne fait qu'afficher.
+    """
+    couleurs = alt.Scale(domain=["France", "Europe"], range=["#257de0", "#f47230"])
+    chart = (
+        alt.Chart(donnees)
+        .mark_bar()
+        .encode(
+            y=alt.Y("option:N", title=None, axis=alt.Axis(labelLimit=280),
+                    sort=alt.EncodingSortField(field="share", op="max",
+                                               order="descending")),
+            yOffset=alt.YOffset("Zone:N"),
+            x=alt.X("share:Q", title=xlabel, axis=alt.Axis(format="%", tickCount=6)),
+            color=alt.Color("Zone:N", scale=couleurs,
+                            legend=alt.Legend(title=None, orient="top")),
+            tooltip=[
+                alt.Tooltip("option:N", title="Option"),
+                alt.Tooltip("Zone:N"),
+                alt.Tooltip("share:Q", title="Part", format=".1%"),
+                alt.Tooltip("n:Q", title="Répondants"),
+                alt.Tooltip("base:Q", title="Base (n)"),
+            ],
+        )
+        .properties(title=titre, height=alt.Step(30))
+    )
+    # Colonnes latérales vides : le graphe reste compact et centré, au lieu de
+    # s'étirer sur toute la largeur de la page.
+    _, centre, _ = st.columns([1, 8, 1])
+    with centre:
+        st.altair_chart(chart, width="stretch")
+
 # --- Bandeau : la France face à l'Europe sur les chiffres du choix des licences ---
 k_fr, k_eu = axe_3.kpis(france), axe_3.kpis(europe_sel)
 col1, col2, col3, col4 = st.columns(4)
@@ -87,7 +122,7 @@ col3.metric("Ont changé d'outil IA (France)",
             common.fmt(k_fr["share_switched"], "{:.0%}"),
             _ecart(k_fr["share_switched"], k_eu["share_switched"]), delta_color="off")
 m_fr, m_eu = k_fr["mistral_llm"], k_eu["mistral_llm"]
-col4.metric("Mistral AI 🇪🇺 (France)",
+col4.metric("Mistral AI (UE) — France",
             "—" if m_fr is None else common.fmt(m_fr[1], "{:.0%}"),
             None if m_fr is None else _ecart(m_fr[1], None if m_eu is None else m_eu[1]),
             delta_color="off")
@@ -96,17 +131,12 @@ st.divider()
 
 # --- Figure 1 : assistants de code, France face à l'Europe ---
 st.subheader("Quels assistants de code fournir ?")
-agents_fr = axe_3.code_agents_table(france).assign(option=lambda t: t["option"].replace(
-    {axe_3.EUROPEAN_AGENT: f"{axe_3.EUROPEAN_AGENT} 🇪🇺"}))
-agents_eu = axe_3.code_agents_table(europe_sel).assign(option=lambda t: t["option"].replace(
-    {axe_3.EUROPEAN_AGENT: f"{axe_3.EUROPEAN_AGENT} 🇪🇺"}))
+agents_comp = axe_3.code_agents_compare(selection)
+agents_fig = agents_comp.assign(option=agents_comp["option"].replace(
+    {axe_3.EUROPEAN_AGENT: f"{axe_3.EUROPEAN_AGENT} (UE)"}))
+_figure_compare(agents_fig, "Assistants de code utilisés dans l'année écoulée "
+                            "(choix multiples)")
 col_fr, col_eu = st.columns(2)
-with col_fr:
-    common.show_figure(charts.barh_shares(
-        agents_fr, "France — assistants de code utilisés dans l'année"))
-with col_eu:
-    common.show_figure(charts.barh_shares(
-        agents_eu, f"{EUROPE_LABEL} — assistants de code utilisés dans l'année"))
 with col_fr:
     _show_population(france[france[axe_3.QUESTION_AGENTS].notna()], "France",
                      "ayant répondu à la question sur les assistants de code")
@@ -123,17 +153,12 @@ if not row.empty:
 
 # --- Figure 2 : fournisseurs de modèles, France face à l'Europe ---
 st.subheader("Quels fournisseurs de modèles ?")
-llms_fr = axe_3.llm_vendors_table(france).assign(option=lambda t: t["option"].replace(
-    {axe_3.EUROPEAN_LLM: f"{axe_3.EUROPEAN_LLM} 🇪🇺"}))
-llms_eu = axe_3.llm_vendors_table(europe_sel).assign(option=lambda t: t["option"].replace(
-    {axe_3.EUROPEAN_LLM: f"{axe_3.EUROPEAN_LLM} 🇪🇺"}))
+llms_comp = axe_3.llm_vendors_compare(selection)
+llms_fig = llms_comp.assign(option=llms_comp["option"].replace(
+    {axe_3.EUROPEAN_LLM: f"{axe_3.EUROPEAN_LLM} (UE)"}))
+_figure_compare(llms_fig, "Fournisseurs de modèles IA utilisés dans l'année écoulée "
+                          "(choix multiples)")
 col_fr, col_eu = st.columns(2)
-with col_fr:
-    common.show_figure(charts.barh_shares(
-        llms_fr, "France — fournisseurs de modèles utilisés dans l'année"))
-with col_eu:
-    common.show_figure(charts.barh_shares(
-        llms_eu, f"{EUROPE_LABEL} — fournisseurs de modèles utilisés dans l'année"))
 with col_fr:
     _show_population(france[france[axe_3.QUESTION_LLMS].notna()], "France",
                      "ayant répondu à la question sur les fournisseurs de modèles")
@@ -159,25 +184,15 @@ REASONS_FR = {
     "better security, privacy, or compliance": "Meilleure sécurité, confidentialité, conformité",
     "for a specific feature": "Pour une fonctionnalité précise",
 }
-switch_fr = axe_3.switch_table(france).assign(
-    option=lambda t: t["option"].map(REASONS_FR).fillna(t["option"]))
-switch_eu = axe_3.switch_table(europe_sel).assign(
-    option=lambda t: t["option"].map(REASONS_FR).fillna(t["option"]))
+switch_comp = axe_3.switch_compare(selection)
+switch_fig = switch_comp.assign(
+    option=switch_comp["option"].map(REASONS_FR).fillna(switch_comp["option"]))
+if switch_fig.empty:
+    st.info("Aucun répondant n'a changé d'outil IA dans cette population.")
+else:
+    _figure_compare(switch_fig, "Raisons du changement d'outil IA, parmi ceux qui ont "
+                                "changé", xlabel="Part des répondants ayant changé d'outil")
 col_fr, col_eu = st.columns(2)
-with col_fr:
-    if switch_fr.empty:
-        st.info("Aucun répondant français n'a changé d'outil IA dans cette population.")
-    else:
-        common.show_figure(charts.barh_shares(
-            switch_fr, "France — raisons du changement", top=15,
-            xlabel="Part des répondants ayant changé d'outil"))
-with col_eu:
-    if switch_eu.empty:
-        st.info(f"Aucun répondant en {EUROPE_LABEL} n'a changé d'outil IA.")
-    else:
-        common.show_figure(charts.barh_shares(
-            switch_eu, f"{EUROPE_LABEL} — raisons du changement", top=15,
-            xlabel="Part des répondants ayant changé d'outil"))
 with col_fr:
     _show_population(france[france[axe_3.QUESTION_SWITCH].str.startswith(
         axe_3.SWITCH_YES, na=False)], "France", "ayant changé d'outil IA dans l'année")
@@ -187,6 +202,8 @@ with col_eu:
 
 # --- Lecture pour la DSI (calculée sur la sélection affichée) ---
 st.subheader("Lecture pour la DSI")
+switch_fr = axe_3.switch_table(france).assign(
+    option=lambda t: t["option"].map(REASONS_FR).fillna(t["option"]))
 lignes = []
 if k_fr["top_agent"] and k_eu["top_agent"]:
     lignes.append(
@@ -215,17 +232,11 @@ with st.expander("Détail des données et questions de l'enquête"):
     for col in (axe_3.QUESTION_AGENTS, axe_3.QUESTION_LLMS, axe_3.QUESTION_SWITCH):
         st.caption(f"`{col}` — {load.question_text(schema, col)}")
     fmt_share = {"share": st.column_config.NumberColumn("Part", format="percent")}
-    st.markdown("**Assistants de code** — France / Europe")
-    c1, c2 = st.columns(2)
-    c1.dataframe(agents_fr, hide_index=True, column_config=fmt_share)
-    c2.dataframe(agents_eu, hide_index=True, column_config=fmt_share)
-    st.markdown("**Fournisseurs de modèles** — France / Europe")
-    c1, c2 = st.columns(2)
-    c1.dataframe(llms_fr, hide_index=True, column_config=fmt_share)
-    c2.dataframe(llms_eu, hide_index=True, column_config=fmt_share)
-    st.markdown("**Raisons du changement d'outil** — France / Europe")
-    c1, c2 = st.columns(2)
-    c1.dataframe(switch_fr, hide_index=True, column_config=fmt_share)
-    c2.dataframe(switch_eu, hide_index=True, column_config=fmt_share)
+    st.markdown("**Assistants de code** — une ligne par option et par zone")
+    st.dataframe(agents_comp, hide_index=True, column_config=fmt_share)
+    st.markdown("**Fournisseurs de modèles** — une ligne par option et par zone")
+    st.dataframe(llms_comp, hide_index=True, column_config=fmt_share)
+    st.markdown("**Raisons du changement d'outil** — une ligne par raison et par zone")
+    st.dataframe(switch_comp, hide_index=True, column_config=fmt_share)
 
 common.volunteer_notice()

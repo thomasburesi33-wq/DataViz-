@@ -43,7 +43,7 @@ def filtrer_population(df: pd.DataFrame, europe: list[str] | None = None,
 
     `europe` vide ou None = les 8 pays retenus par défaut (accueil.EUROPE_DEFAUT) ;
     `roles` vide ou None = tous les postes. La colonne Zone vaut « France » ou
-    « Europe » et sert à produire les figures en vis-à-vis.
+    « Europe » et sert à produire les figures comparées.
     """
     selection = accueil.filtrer(df, europe or accueil.EUROPE_DEFAUT)
     return filter_axis(selection, roles or [])
@@ -52,8 +52,7 @@ def code_agents_table(df: pd.DataFrame) -> pd.DataFrame:
     """Part des répondants ayant utilisé chaque assistant de code dans l'année écoulée.
 
     Question à choix multiples : la base est le nombre de répondants ayant répondu
-    à la question, et les parts ne somment pas à 100 %. La page appelle cette
-    fonction deux fois : sur la zone France et sur la zone Europe.
+    à la question, et les parts ne somment pas à 100 %.
     """
     return indicators.share_multi(df, QUESTION_AGENTS)
 
@@ -85,6 +84,32 @@ def switch_table(df: pd.DataFrame) -> pd.DataFrame:
         "base": base,
         "share": counts.to_numpy() / base,
     })
+
+def _compare(df: pd.DataFrame, table_fn, top: int) -> pd.DataFrame:
+    """Empile les tables des zones France et Europe en une table longue.
+
+    Renvoie une ligne par (option, Zone) : option, n, base, share, Zone.
+    Les `top` options les plus citées sur l'ensemble de la sélection sont gardées.
+    """
+    tables = [table_fn(df[df["Zone"] == zone]).assign(Zone=zone)
+              for zone in ("France", "Europe")]
+    combined = pd.concat(tables, ignore_index=True)
+    if combined.empty:
+        return pd.DataFrame(columns=["option", "n", "base", "share", "Zone"])
+    ordre = table_fn(df).head(top)["option"].tolist()
+    return combined[combined["option"].isin(ordre)].reset_index(drop=True)
+
+def code_agents_compare(df: pd.DataFrame, top: int = 12) -> pd.DataFrame:
+    """Assistants de code utilisés, France face à l'Europe (table longue à deux zones)."""
+    return _compare(df, code_agents_table, top)
+
+def llm_vendors_compare(df: pd.DataFrame, top: int = 12) -> pd.DataFrame:
+    """Fournisseurs de modèles utilisés, France face à l'Europe (table longue à deux zones)."""
+    return _compare(df, llm_vendors_table, top)
+
+def switch_compare(df: pd.DataFrame, top: int = 15) -> pd.DataFrame:
+    """Raisons du changement d'outil IA, France face à l'Europe (table longue à deux zones)."""
+    return _compare(df, switch_table, top)
 
 def kpis(df: pd.DataFrame) -> dict[str, object]:
     """Indicateurs d'une zone (France ou Europe), calculés sur la base de chaque question.

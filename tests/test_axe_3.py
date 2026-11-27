@@ -7,6 +7,7 @@ from analysis import axe_3
 @pytest.fixture
 def df():
     return pd.DataFrame({
+        "Country": ["France", "Germany", "France", "Spain", "France", "Japan"],
         "Role": ["Developer, full-stack", "Developer, back-end", "Student",
                  "Developer, full-stack", "Student", "Developer, back-end"],
         "AICodeAgentHaveWorkedWith": [
@@ -24,10 +25,23 @@ def df():
         ],
     })
 
+@pytest.fixture
+def sel(df):
+    """La sélection France / Europe utilisée par les fonctions de comparaison."""
+    return axe_3.filtrer_population(df, ["Germany", "Spain"])
+
 def test_filter_axis_vide_signifie_pas_de_filtre(df):
     assert len(axe_3.filter_axis(df, [])) == len(df)
     roles = axe_3.filter_axis(df, ["Student"])
     assert set(roles["Role"]) == {"Student"}
+
+def test_filtrer_population_france_face_a_leurope(df):
+    sel = axe_3.filtrer_population(df, ["Germany", "Spain"])
+    assert set(sel["Zone"]) == {"France", "Europe"}
+    assert set(sel["Country"]) == {"France", "Germany", "Spain"}
+    # Le Japon n'est pas dans la comparaison, quels que soient les filtres.
+    assert "Japan" not in set(axe_3.filtrer_population(df)["Country"])
+    assert set(axe_3.filtrer_population(df, ["Germany"], ["Student"])["Role"]) == {"Student"}
 
 def test_code_agents_table_choix_multiples(df):
     table = axe_3.code_agents_table(df).set_index("option")
@@ -45,6 +59,23 @@ def test_switch_table_ne_garde_que_les_raisons(df):
 
 def test_switch_table_sur_selection_vide(df):
     assert axe_3.switch_table(df.iloc[0:0]).empty
+
+def test_compare_empile_france_et_europe(sel):
+    table = axe_3.code_agents_compare(sel)
+    assert set(table["Zone"]) == {"France", "Europe"}
+    # Chaque option est présente pour les deux zones : une seule figure groupée suffit.
+    assert table.groupby("option")["Zone"].nunique().eq(2).all()
+    copilot = table.set_index(["option", "Zone"]).loc[("GitHub Copilot", "France")]
+    assert copilot["n"] == 1 and copilot["base"] == 3
+
+def test_compare_switch_par_zone(sel):
+    table = axe_3.switch_compare(sel)
+    assert set(table["Zone"]) == {"France", "Europe"}
+    assert set(table["option"]) == {"better output quality", "lower cost"}
+
+def test_compare_sur_selection_vide(sel):
+    vide = axe_3.filtrer_population(sel.iloc[0:0].drop(columns=["Zone"]))
+    assert axe_3.code_agents_compare(vide).empty
 
 def test_kpis(df):
     k = axe_3.kpis(df)

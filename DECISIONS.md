@@ -56,8 +56,12 @@ Titre de la figure : il n'affirme le constat que pour la population par défaut 
 
 ## Axes
 
-
-## Axe 4 · Usages, impact et organisation
+## Axes 3
+- **Figures comparées en une seule vue** : barres horizontales groupées en Altair
+  (une couleur par zone, France en bleu `#257de0`, Europe en orange `#f47230`,
+  comme la page principale), construites dans la page — `ui/charts.py` n'est pas
+  modifié, pas de conflit avec les autres branches.
+  ## Axe 4 · Usages, impact et organisation
 
 - **Question** : pour quelles tâches l'IA est-elle jugée utile, à quel prix en erreurs, et
   comment les entreprises comparables encadrent-elles son usage ?
