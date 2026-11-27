@@ -56,4 +56,26 @@ Titre de la figure : il n'affirme le constat que pour la population par défaut 
 
 ## Axes
 
-- *Chaque responsable d'axe ajoute ici ses choix (question, filtres, figures, seuils).*
+
+## Axe 4 · Usages, impact et organisation
+
+- **Question** : pour quelles tâches l'IA est-elle jugée utile, à quel prix en erreurs, et
+  comment les entreprises comparables encadrent-elles son usage ?
+- **Population** : France face aux 8 pays européens de l'accueil (`analysis/accueil.py`),
+  même seuil de 100 répondants (marge d'erreur ≤ ±10 points).
+- **« Utile »** = « Useful » ou « Very useful » à `AIImpact_1…7`. Par défaut, la base compte
+  tous les répondants à la question, « Not applicable » compris : une tâche que l'IA ne touche
+  pas n'est pas une tâche où elle aide. Un interrupteur permet de l'exclure (la conception passe
+  alors d'environ 40 % à 54 %, la communication de 27 % à 39 %).
+- **Satisfaction** : « améliorée » = Somewhat ou Greatly improved, « dégradée » = Somewhat ou
+  Greatly decreased (`AISat_1…7`), même tâche que `AIImpact_k`.
+- **Taille d'entreprise** : deux groupes, 1 000 salariés et plus / moins de 1 000 ; les
+  indépendants sont écartés (pas d'organisation à encadrer). Pas de filtre de taille : la
+  comparaison par taille est faite dans la vue « Politique selon la taille », seule à
+  l'exploiter dans le brief.
+- **Figure-clé** : barres par tâche, France en couleur, Europe en gris (matplotlib, comme le
+  recommande le cours). Le titre n'affirme le constat que sur la vue par défaut.
+- **Onglets** : « Le constat » (4 indicateurs + figure-clé), « Explorer » (satisfaction par
+  tâche, erreurs coûteuses, politique selon la taille), « Données » (toutes les tables).
+- **Limites** : perceptions déclarées par des volontaires, pas des gains mesurés ; aucune
+  cause démontrée ; secteur industriel non isolable.
