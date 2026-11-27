@@ -47,7 +47,12 @@ et signée plutôt que de réécrire une décision passée.
 
 ## Tableau de bord principal
 
-- *À compléter : message retenu, figure-clé, indicateurs du bandeau, et pourquoi.*
+Message : une politique d'usage de l'IA doit traiter les freins avant l'outillage. Parmi les répondants, ceux qui vivent en France utilisent moins l'IA, citent plus souvent l'environnement comme frein et ont plus de réserves que leurs voisins européens, mais font autant confiance à l'IA quand ils l'utilisent.
+Indicateurs (4) : n'utilisent pas l'IA (AISelect), environnement comme frein et aucune réserve (AIAvoid), confiance si le résultat est vérifiable (AITrust). Chacun est affiché pour la France avec son écart en points avec l'Europe : c'est cet écart qui porte le message.
+Figure-clé : haltères France / Europe. La France est en couleur (le message), l'Europe en gris (le contexte). Une seule figure-clé : les autres preuves sont le rôle des axes.
+Onglets : « Le constat » (indicateurs et figure-clé, ouvert par défaut), « Explorer » (un indicateur pays par pays, graphique natif) et « Données » (la table derrière la figure).
+Effectif minimal : 100 répondants par indicateur et par zone. La marge d'erreur d'une part calculée sur n répondants vaut au plus environ 1/√n, soit ±10 points pour n = 100. Les écarts France / Europe de la population par défaut sont de 7 à 15 points, calculés sur 490 à 650 répondants en France (marge ±4 à ±4,5 points). Sous 100 répondants, la page avertit et n'affiche pas de figure (st.warning puis st.stop) ; dans « Explorer », les pays sous ce seuil sont masqués et nommés.
+Titre de la figure : il n'affirme le constat que pour la population par défaut (8 pays, tous âges), où il a été vérifié. Avec d'autres filtres, il devient descriptif.
 
 ## Axes
 

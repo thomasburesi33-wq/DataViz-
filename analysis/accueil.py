@@ -87,3 +87,36 @@ def ecarts(tableau: pd.DataFrame) -> pd.DataFrame:
     large["ecart_points"] = 100 * (large["France"] - large["Europe"])
     ordre = [i[0] for i in INDICATEURS]
     return large.reindex(ordre).reset_index()
+
+
+# Effectif minimal sous lequel une part n'est pas affichée (raisonnement dans DECISIONS.md).
+# La marge d'erreur d'une part calculée sur n répondants vaut au plus environ 1/√n :
+# ±10 points pour n = 100. En dessous, l'écart France / Europe (7 à 15 points sur la
+# population par défaut) pourrait n'être que du bruit.
+MIN_REPONDANTS = 100
+
+
+def bases_insuffisantes(tableau: pd.DataFrame, minimum: int = MIN_REPONDANTS) -> pd.DataFrame:
+    """Lignes du tableau dont la base (répondants à la question) est sous le minimum."""
+    return tableau[tableau["base"] < minimum]
+
+
+def marge_erreur(n: int) -> float:
+    """Marge d'erreur maximale (≈ 2 écarts-types) d'une part calculée sur n répondants."""
+    return 1 / n ** 0.5 if n else float("nan")
+
+
+def par_pays(sel: pd.DataFrame, libelle: str) -> pd.DataFrame:
+    """Part d'un indicateur pays par pays (France et pays de comparaison).
+
+    Une ligne par pays avec pays (nom français), part, n, base, triée par part
+    décroissante. `sel` vient de `filtrer`, `libelle` est un libellé de INDICATEURS.
+    """
+    _, colonne, reponse, _ = next(i for i in INDICATEURS if i[0] == libelle)
+    lignes = []
+    for pays, groupe in sel.groupby("Country"):
+        p, n, base = part(groupe, colonne, reponse)
+        lignes.append({"pays": NOMS_FR.get(pays, pays), "part": p, "n": n, "base": base})
+    if not lignes:
+        return pd.DataFrame(columns=["pays", "part", "n", "base"])
+    return pd.DataFrame(lignes).sort_values("part", ascending=False, ignore_index=True)

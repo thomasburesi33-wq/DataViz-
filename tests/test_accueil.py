@@ -39,3 +39,16 @@ def test_tableau_et_ecarts(df):
     e = accueil.ecarts(t).set_index("indicateur")
     assert e.loc["N'utilisent pas l'IA au travail", "ecart_points"] == pytest.approx(0)
     assert e.loc["N'ont aucune réserve envers l'IA", "Europe"] == pytest.approx(1)
+
+
+def test_par_pays(df):
+    t = accueil.par_pays(accueil.filtrer(df, ["Germany"]),
+                         "N'utilisent pas l'IA au travail").set_index("pays")
+    assert set(t.index) == {"France", "Allemagne"}
+    assert t.loc["France", "base"] == 2 and t.loc["France", "part"] == 0.5
+
+
+def test_seuil_et_marge(df):
+    t = accueil.tableau_france_europe(accueil.filtrer(df, ["Germany"]))
+    assert len(accueil.bases_insuffisantes(t)) == len(t)  # tout est sous 100 ici
+    assert accueil.marge_erreur(100) == 0.1
